@@ -12,12 +12,14 @@ cargo install mdbook-icons
 
 ## Configure `book.toml`
 
-Copy `book.toml.example` into your book and keep the preprocessor entry:
+Add this to your book's `book.toml`:
 
 ```toml
 [preprocessor.icons]
 command = "mdbook-icons"
 ```
+
+You can also check out a working example on my GitHub Pages site: [mdbook-icons example](https://ld3z.github.io/mdbook-icons/).
 
 ## Usage
 
