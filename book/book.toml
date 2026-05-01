@@ -5,3 +5,11 @@ language = "en"
 
 [preprocessor.icons]
 command = "mdbook-icons"
+
+[output.html]
+admonitions = true
+mathjax-support = false
+git-repository-url = "https://github.com/ld3z/mdbook-icons"
+git-repository-icon = "fab-github"
+edit-url-template = "https://github.com/ld3z/mdbook-icons/edit/main/{path}"
+no-section-label = true

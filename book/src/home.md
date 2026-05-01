@@ -1,4 +1,4 @@
-# Welcome!
+# Welcome
 
 Icons can be written directly in Markdown by wrapping the icon name and collection it belongs to in colons:
 
@@ -21,3 +21,12 @@ They can even be in headers like this:
 ## Find more
 
 You can find more icons at [https://icones.js.org/](https://icones.js.org/)
+
+----
+
+## Roadmap
+
+| Idea                                                          | Planned?                    | In Progress                  |
+|---------------------------------------------------------------|-----------------------------|------------------------------|
+| Allow users to define custom shortcodes and map them to icons | :twemoji-check-mark-button: | :twemoji-hourglass-not-done: |
+| Custom Icons?                                                 | :twemoji-check-mark-button: | :twemoji-hourglass-not-done: |
