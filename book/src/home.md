@@ -37,9 +37,9 @@ Icons can be mixed into any normal Markdown content:
 
 | Feature | Example |
 | --- | --- |
-| Inline icon | `Hello :mdi-github: world!` |
-| Header icon | `## Hello :twemoji-waving-hand:` |
-| Code example | `:twemoji-glowing-star:` |
+| Inline icon | Hello :mdi-github: world! |
+| Header icon | Hello :twemoji-waving-hand: |
+| Code example | :twemoji-glowing-star: |
 
 ## Finding more icons
 
