@@ -1,21 +1,55 @@
 mod iconify;
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, anyhow};
 use iconify::IconStore;
-use mdbook::book::{Book, BookItem};
-use mdbook::preprocess::CmdPreprocessor;
 use once_cell::sync::Lazy;
 use regex::Regex;
+use serde_json::Value;
 use std::{env, io};
 
 static SHORTCODE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r":([A-Za-z0-9_-]+):").unwrap());
 
-fn replace_in_book(book: &mut Book, store: &IconStore) {
-    book.for_each_mut(|item| {
-        if let BookItem::Chapter(chapter) = item {
-            chapter.content = transform_markdown(&chapter.content, store);
+fn replace_in_book(book: &mut Value, store: &IconStore) -> Result<()> {
+    let items = if let Some(items) = book.get_mut("sections").and_then(Value::as_array_mut) {
+        items
+    } else if let Some(items) = book.get_mut("items").and_then(Value::as_array_mut) {
+        items
+    } else {
+        return Err(anyhow!("mdBook input missing top-level book items array"));
+    };
+
+    for item in items {
+        replace_in_book_item(item, store)?;
+    }
+
+    Ok(())
+}
+
+fn replace_in_book_item(item: &mut Value, store: &IconStore) -> Result<()> {
+    let Some(obj) = item.as_object_mut() else {
+        return Ok(());
+    };
+
+    if let Some(chapter) = obj.get_mut("Chapter") {
+        let chapter = chapter
+            .as_object_mut()
+            .ok_or_else(|| anyhow!("chapter item is not an object"))?;
+
+        if let Some(content) = chapter.get_mut("content") {
+            let content_str = content
+                .as_str()
+                .ok_or_else(|| anyhow!("chapter content is not a string"))?;
+            *content = Value::String(transform_markdown(content_str, store));
         }
-    });
+
+        if let Some(sub_items) = chapter.get_mut("sub_items").and_then(Value::as_array_mut) {
+            for sub_item in sub_items {
+                replace_in_book_item(sub_item, store)?;
+            }
+        }
+    }
+
+    Ok(())
 }
 
 fn transform_markdown(input: &str, store: &IconStore) -> String {
@@ -89,13 +123,19 @@ fn main() -> Result<()> {
         }
     }
 
-    let (_ctx, mut book) = CmdPreprocessor::parse_input(io::stdin())
-        .context("failed to parse mdbook preprocessing input")?;
+    let stdin = io::stdin();
+    let mut input: Value =
+        serde_json::from_reader(stdin).context("failed to parse mdbook preprocessing input")?;
+
+    let book = input
+        .as_array_mut()
+        .and_then(|items| items.get_mut(1))
+        .ok_or_else(|| anyhow!("mdBook input must be a tuple of (context, book)"))?;
 
     let store = IconStore::new();
-    replace_in_book(&mut book, &store);
+    replace_in_book(book, &store).context("failed to process book contents")?;
 
-    serde_json::to_writer(io::stdout(), &book).context("failed to write processed book")?;
+    serde_json::to_writer(io::stdout(), book).context("failed to write processed book")?;
     Ok(())
 }
 
@@ -131,5 +171,14 @@ mod tests {
             .expect("parent should render");
 
         assert_eq!(alias, parent);
+    }
+
+    #[test]
+    fn renders_twemoji_glowing_star() {
+        let store = IconStore::new();
+        let rendered = store
+            .render_shortcode_result("twemoji-glowing-star")
+            .expect("twemoji shortcode should resolve");
+        assert!(rendered.is_some(), "twemoji icon should render");
     }
 }

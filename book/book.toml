@@ -1,0 +1,7 @@
+[book]
+title = "mdbook-icons"
+authors = ["ld3zian"]
+language = "en"
+
+[preprocessor.icons]
+command = "cargo run --quiet --manifest-path ../Cargo.toml --"

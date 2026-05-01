@@ -20,9 +20,15 @@ impl IconStore {
     }
 
     pub fn render_shortcode(&self, shortcode: &str) -> Option<String> {
-        let (prefix, name) = self.split_shortcode(shortcode)?;
-        let icon = self.resolve_icon(&prefix, &name).ok()?;
-        Some(icon.to_svg())
+        self.render_shortcode_result(shortcode).ok().flatten()
+    }
+
+    pub(crate) fn render_shortcode_result(&self, shortcode: &str) -> Result<Option<String>> {
+        let Some((prefix, name)) = self.split_shortcode(shortcode) else {
+            return Ok(None);
+        };
+        let icon = self.resolve_icon(&prefix, &name)?;
+        Ok(Some(icon.to_svg()))
     }
 
     fn split_shortcode(&self, shortcode: &str) -> Option<(String, String)> {
@@ -71,9 +77,9 @@ impl IconStore {
 #[derive(Debug, Clone, Deserialize)]
 struct Collection {
     #[serde(default)]
-    width: Option<u32>,
+    width: Option<f32>,
     #[serde(default)]
-    height: Option<u32>,
+    height: Option<f32>,
     #[serde(default)]
     icons: HashMap<String, IconEntry>,
     #[serde(default)]
@@ -84,9 +90,9 @@ struct Collection {
 struct IconEntry {
     body: String,
     #[serde(default)]
-    width: Option<u32>,
+    width: Option<f32>,
     #[serde(default)]
-    height: Option<u32>,
+    height: Option<f32>,
     #[serde(default, rename = "hFlip")]
     h_flip: bool,
     #[serde(default, rename = "vFlip")]
@@ -99,9 +105,9 @@ struct IconEntry {
 struct AliasEntry {
     parent: String,
     #[serde(default)]
-    width: Option<u32>,
+    width: Option<f32>,
     #[serde(default)]
-    height: Option<u32>,
+    height: Option<f32>,
     #[serde(default, rename = "hFlip")]
     h_flip: bool,
     #[serde(default, rename = "vFlip")]
@@ -113,8 +119,8 @@ struct AliasEntry {
 #[derive(Debug, Clone)]
 struct ResolvedIcon {
     body: String,
-    width: u32,
-    height: u32,
+    width: f32,
+    height: f32,
     rotate: u8,
     h_flip: bool,
     v_flip: bool,
@@ -165,8 +171,8 @@ fn resolve_from_collection(
     if let Some(icon) = collection.icons.get(name) {
         return Ok(ResolvedIcon {
             body: icon.body.clone(),
-            width: icon.width.or(collection.width).unwrap_or(16),
-            height: icon.height.or(collection.height).unwrap_or(16),
+            width: icon.width.or(collection.width).unwrap_or(16.0),
+            height: icon.height.or(collection.height).unwrap_or(16.0),
             rotate: icon.rotate % 4,
             h_flip: icon.h_flip,
             v_flip: icon.v_flip,
@@ -192,8 +198,8 @@ fn resolve_from_collection(
 }
 
 fn icon_transform(
-    width: u32,
-    height: u32,
+    width: f32,
+    height: f32,
     rotate: u8,
     h_flip: bool,
     v_flip: bool,
@@ -203,8 +209,8 @@ fn icon_transform(
     }
 
     let mut transforms = Vec::new();
-    let cx = width as f32 / 2.0;
-    let cy = height as f32 / 2.0;
+    let cx = width / 2.0;
+    let cy = height / 2.0;
 
     if h_flip || v_flip {
         let sx = if h_flip { -1.0 } else { 1.0 };
