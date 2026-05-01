@@ -41,6 +41,9 @@ Icons can be mixed into any normal Markdown content:
 | Header icon | Hello :twemoji-waving-hand: |
 | Code example | :twemoji-glowing-star: |
 
+> [!IMPORTANT]
+> Icons get centered in tables with no text!
+
 ## Finding more icons
 
 Browse the icon catalog at [icones.js.org](https://icones.js.org/).

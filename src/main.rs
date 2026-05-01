@@ -9,6 +9,7 @@ use serde_json::Value;
 use std::io;
 
 static SHORTCODE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r":([A-Za-z0-9_-]+):").unwrap());
+static TABLE_SHORTCODE_ONLY_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^:([A-Za-z0-9_-]+):$").unwrap());
 
 fn replace_in_book(book: &mut Value, store: &IconStore) -> Result<()> {
     let items = if let Some(items) = book.get_mut("sections").and_then(Value::as_array_mut) {
@@ -72,11 +73,42 @@ fn transform_markdown(input: &str, store: &IconStore) -> String {
             continue;
         }
 
-        out.push_str(&replace_shortcodes(line, store));
+        if looks_like_table_row(line) {
+            out.push_str(&replace_shortcodes_in_table_row(line, store));
+        } else {
+            out.push_str(&replace_shortcodes(line, store));
+        }
         out.push('\n');
     }
 
     out
+}
+
+fn looks_like_table_row(line: &str) -> bool {
+    line.trim_start().starts_with('|') && line.contains('|')
+}
+
+fn replace_shortcodes_in_table_row(line: &str, store: &IconStore) -> String {
+    line.split('|')
+        .map(|cell| replace_shortcodes_in_table_cell(cell, store))
+        .collect::<Vec<_>>()
+        .join("|")
+}
+
+fn replace_shortcodes_in_table_cell(cell: &str, store: &IconStore) -> String {
+    let trimmed = cell.trim();
+    if let Some(shortcode) = TABLE_SHORTCODE_ONLY_RE
+        .captures(trimmed)
+        .and_then(|caps| caps.get(1).map(|m| m.as_str()))
+    {
+        if let Some(svg) = store.render_shortcode(shortcode) {
+            return format!(
+                "<span style=\"display:inline-flex; width: 100%; justify-content: center;\">{svg}</span>"
+            );
+        }
+    }
+
+    replace_shortcodes(cell, store)
 }
 
 fn replace_shortcodes(line: &str, store: &IconStore) -> String {
@@ -200,5 +232,17 @@ mod tests {
             .render_shortcode_result("twemoji-glowing-star")
             .expect("twemoji shortcode should resolve");
         assert!(rendered.is_some(), "twemoji icon should render");
+    }
+
+    #[test]
+    fn centers_icon_only_table_cells() {
+        let store = IconStore::new();
+        let input = "| Status |\n| --- |\n| :twemoji-check-mark-button: |\n";
+        let output = transform_markdown(input, &store);
+
+        assert!(
+            output.contains("display:inline-flex; width: 100%; justify-content: center;"),
+            "icon-only table cells should be centered"
+        );
     }
 }
