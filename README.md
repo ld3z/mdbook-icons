@@ -21,6 +21,8 @@ command = "mdbook-icons"
 
 ## Usage
 
+Find icon names and prefixes at [icones.js.org](https://icones.js.org/).
+
 In Markdown:
 
 ```md
