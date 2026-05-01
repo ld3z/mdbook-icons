@@ -32,9 +32,12 @@ fn main() {
     }
 }
 
+const ICONIFY_JSON_VERSION_FILE: &str = "iconify-json.version";
+
 fn run() -> Result<()> {
     println!("cargo:rerun-if-env-changed=ICONIFY_JSON_DIR");
-    println!("cargo:rerun-if-env-changed=ICONIFY_JSON_TARBALL");
+    println!("cargo:rerun-if-env-changed=ICONIFY_JSON_VERSION");
+    println!("cargo:rerun-if-changed={}", ICONIFY_JSON_VERSION_FILE);
 
     let out_dir = PathBuf::from(env::var("OUT_DIR").context("OUT_DIR not set")?);
     let cache_dir = cache_root().join("v2");
@@ -71,6 +74,13 @@ fn cache_root() -> PathBuf {
     }
 }
 
+fn read_version_file() -> Result<String> {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(ICONIFY_JSON_VERSION_FILE);
+    let version = fs::read_to_string(&path)
+        .with_context(|| format!("reading Iconify version file {}", path.display()))?;
+    Ok(version.trim().to_string())
+}
+
 fn normalize_local_dir(dir: &Path) -> PathBuf {
     if dir.join("json").is_dir() {
         dir.join("json")
@@ -82,7 +92,10 @@ fn normalize_local_dir(dir: &Path) -> PathBuf {
 #[derive(Debug)]
 enum Source {
     Local(PathBuf),
-    Remote { tarball_url: String },
+    Remote {
+        version: String,
+        tarball_url: String,
+    },
 }
 
 impl Source {
@@ -116,8 +129,12 @@ impl Source {
                     }
                 }
             }
-            Source::Remote { tarball_url } => {
+            Source::Remote {
+                version,
+                tarball_url,
+            } => {
                 "remote".hash(&mut hasher);
+                version.hash(&mut hasher);
                 tarball_url.hash(&mut hasher);
             }
         }
@@ -127,7 +144,7 @@ impl Source {
     fn load_entries(&self) -> Result<Vec<(String, Vec<u8>)>> {
         match self {
             Source::Local(dir) => extract_from_local_dir(dir),
-            Source::Remote { tarball_url } => extract_from_tarball(tarball_url),
+            Source::Remote { tarball_url, .. } => extract_from_tarball(tarball_url),
         }
     }
 }
@@ -137,21 +154,25 @@ fn resolve_source() -> Result<Source> {
         return Ok(Source::Local(normalize_local_dir(&PathBuf::from(dir))));
     }
 
-    let tarball = env::var("ICONIFY_JSON_TARBALL")
-        .unwrap_or_else(|_| "https://registry.npmjs.org/@iconify/json/latest".to_string());
+    let version = read_version_file()
+        .or_else(|_| {
+            env::var("ICONIFY_JSON_VERSION")
+                .map_err(anyhow::Error::from)
+                .with_context(|| "ICONIFY_JSON_VERSION is not set")
+        })
+        .unwrap_or_else(|_| "2.2.468".to_string());
+    let metadata_url = format!("https://registry.npmjs.org/@iconify/json/{version}");
 
-    let tarball_url = if tarball.ends_with(".tgz") {
-        tarball
-    } else {
-        let meta: NpmMeta = ureq::get(&tarball)
-            .call()
-            .context("downloading Iconify package metadata")?
-            .into_json()
-            .context("parsing Iconify package metadata")?;
-        meta.dist.tarball
-    };
+    let meta: NpmMeta = ureq::get(&metadata_url)
+        .call()
+        .with_context(|| format!("downloading Iconify package metadata for version {version}"))?
+        .into_json()
+        .with_context(|| format!("parsing Iconify package metadata for version {version}"))?;
 
-    Ok(Source::Remote { tarball_url })
+    Ok(Source::Remote {
+        version,
+        tarball_url: meta.dist.tarball,
+    })
 }
 
 fn extract_from_local_dir(dir: &Path) -> Result<Vec<(String, Vec<u8>)>> {

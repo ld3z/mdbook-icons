@@ -12,16 +12,25 @@ The icon collections are embedded at build time, so users do not need `npm` inst
 cargo build --release
 ```
 
-2. Optional: if you want to avoid downloading the Iconify package from the network during build, point the build to a local `@iconify/json` checkout:
+2. The embedded Iconify version is controlled by the `iconify-json.version` file in the repo.
+   To update the binary, edit that file and rebuild:
+
+```bash
+# change iconify-json.version, then
+cargo build --release
+```
+
+   You can still override it temporarily with `ICONIFY_JSON_VERSION` if needed.
+
+3. Optional: if you want to avoid downloading the Iconify package from the network during build, point the build to a local `@iconify/json` checkout:
 
 ```bash
 export ICONIFY_JSON_DIR=./node_modules/@iconify/json/json
 ```
 
-By default the build script downloads the Iconify JSON package from the npm registry and embeds it into the binary.
-It also caches the packed Iconify data under `target/iconify-cache` to speed up rebuilds.
+The build script also caches the packed Iconify data under `target/iconify-cache` to speed up rebuilds.
 
-3. Add it to your `book.toml`:
+4. Add it to your `book.toml`:
 
 ```toml
 [preprocessor.icons]
