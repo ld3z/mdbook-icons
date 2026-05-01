@@ -31,6 +31,9 @@ You can find more icons at [https://icones.js.org/](https://icones.js.org/)
 | Allow users to define custom shortcodes and map them to icons | :twemoji-check-mark-button: | :twemoji-hourglass-not-done: |
 | Custom Icons?                                                 | :twemoji-check-mark-button: | :twemoji-hourglass-not-done: |
 
-## Working versions:
+### Working versions:
 
-mdBook v0.5 & 0.4
+| Version    | Tested                      |
+|------------|-----------------------------|
+| mdBook 0.5 | :twemoji-check-mark-button: |
+| mdBook 0.4 | :twemoji-check-mark-button: |

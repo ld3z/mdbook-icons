@@ -24,7 +24,7 @@ jobs:
           tool: mdbook@0.5
 
       - name: Install mdBook Icons
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/cache-cargo-install-action@v3
         with:
           tool: mdbook-icons
 
