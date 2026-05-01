@@ -142,7 +142,7 @@ impl ResolvedIcon {
             "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" viewBox=\"",
         );
         svg.push_str(&view_box);
-        svg.push_str("\" role=\"img\" aria-hidden=\"true\"");
+        svg.push_str("\" role=\"img\" aria-hidden=\"true\" style=\"vertical-align: -0.125em; display: inline-block;\"");
         if transform.is_none() {
             svg.push_str(">");
             svg.push_str(&self.body);
