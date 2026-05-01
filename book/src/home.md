@@ -1,39 +1,60 @@
-# Welcome
+# mdBook Icons
 
-Icons can be written directly in Markdown by wrapping the icon name and collection it belongs to in colons:
+A small mdBook extension for writing icons directly in Markdown.
+
+Use an icon shortcode by wrapping the collection and icon name in colons:
 
 ```md
 :twemoji-glowing-star:
 ```
 
-When the book is built, that text is replaced with the matching icon. You can place icons inline with normal text, like this: `Hello :mdi-github: world!`
+When the book is built, the shortcode is replaced with the matching icon.
 
-## Example
+## What it looks like
 
-Here is what icons look like:
+### Inline icons
 
-The project is on :mdi-github: GitHub and uses :skill-icons-docker: Docker.
+You can drop icons right into a sentence:
 
-They can even be in headers like this:
+The project is on :mdi-github: GitHub and does not use :skill-icons-docker: Docker. But is written entirely in [Rust!:mdi-language-rust:](https://rust-lang.org/)
 
-## Hello! :twemoji-waving-hand:
+### Icons in headings
 
-## Find more
+Icons also work in headings, which makes section titles feel a little more expressive:
 
-You can find more icons at [https://icones.js.org/](https://icones.js.org/)
+## Hello there :twemoji-waving-hand:
 
-----
+### Lists and callouts
+
+Icons can be mixed into any normal Markdown content:
+
+- :twemoji-check-mark-button: Supported in regular text
+- :twemoji-check-mark-button: Supported in headings
+- :twemoji-check-mark-button: Supported in tables
+- :twemoji-check-mark-button: Supported wherever Markdown is rendered
+
+### Tables
+
+| Feature | Example |
+| --- | --- |
+| Inline icon | `Hello :mdi-github: world!` |
+| Header icon | `## Hello :twemoji-waving-hand:` |
+| Code example | `:twemoji-glowing-star:` |
+
+## Finding more icons
+
+Browse the icon catalog at [icones.js.org](https://icones.js.org/).
 
 ## Roadmap
 
-| Idea                                                          | Planned?                    | In Progress                  |
-|---------------------------------------------------------------|-----------------------------|------------------------------|
-| Allow users to define custom shortcodes and map them to icons | :twemoji-check-mark-button: | :twemoji-hourglass-not-done: |
-| Custom Icons?                                                 | :twemoji-check-mark-button: | :twemoji-hourglass-not-done: |
+| Feature | Status |
+| --- | --- |
+| Custom shortcode mappings | :twemoji-hourglass-not-done: |
+| Custom icon sets | :twemoji-hourglass-not-done: |
 
-### Working versions:
+### Tested versions
 
-| Version    | Tested                      |
-|------------|-----------------------------|
+| Version | Status |
+| --- | --- |
 | mdBook 0.5 | :twemoji-check-mark-button: |
 | mdBook 0.4 | :twemoji-check-mark-button: |
