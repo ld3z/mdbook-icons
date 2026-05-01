@@ -1,11 +1,12 @@
 mod iconify;
 
 use anyhow::{Context, Result, anyhow};
+use clap::{Parser, Subcommand};
 use iconify::IconStore;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde_json::Value;
-use std::{env, io};
+use std::io;
 
 static SHORTCODE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r":([A-Za-z0-9_-]+):").unwrap());
 
@@ -115,12 +116,31 @@ fn replace_shortcodes_in_text(text: &str, store: &IconStore) -> String {
         .into_owned()
 }
 
+#[derive(Parser)]
+#[command(
+    name = "mdbook-icons",
+    about = "Replace Iconify shortcodes with inline SVG in mdBook content.",
+    version
+)]
+struct Cli {
+    #[command(subcommand)]
+    command: Option<Command>,
+}
+
+#[derive(Subcommand)]
+enum Command {
+    /// Check whether the renderer is supported by this preprocessor.
+    Supports {
+        /// The renderer name passed by mdBook.
+        renderer: String,
+    },
+}
+
 fn main() -> Result<()> {
-    if let Some(arg1) = env::args().nth(1) {
-        if arg1 == "supports" {
-            let renderer = env::args().nth(2).unwrap_or_else(|| String::from("html"));
-            std::process::exit(if renderer == "html" { 0 } else { 1 });
-        }
+    let cli = Cli::parse();
+
+    if let Some(Command::Supports { renderer }) = cli.command {
+        std::process::exit(if renderer == "html" { 0 } else { 1 });
     }
 
     let stdin = io::stdin();

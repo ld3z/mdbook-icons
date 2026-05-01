@@ -1,36 +1,18 @@
 # mdbook-icons
 
-A small mdbook preprocessor that replaces icon shortcodes like `:mdi-home:` or `:twemoji-glowing-star:` with inline SVGs from Iconify.
+Replace Iconify shortcodes like `:mdi-home:` and `:twemoji-glowing-star:` with inline SVG in mdBook.
 
-The icon collections are embedded at build time, so users do not need `npm` installed at runtime.
+An mdbook preprocessor that turns icon shortcodes into SVGs from Iconify.
 
-## Setup
-
-1. Build the preprocessor:
+## Install
 
 ```bash
-cargo build --release
+cargo install mdbook-icons
 ```
 
-2. The embedded Iconify version is controlled by the `iconify-json.version` file in the repo.
-   To update the binary, edit that file and rebuild:
+## Configure `book.toml`
 
-```bash
-# change iconify-json.version, then
-cargo build --release
-```
-
-   You can still override it temporarily with `ICONIFY_JSON_VERSION` if needed.
-
-3. Optional: if you want to avoid downloading the Iconify package from the network during build, point the build to a local `@iconify/json` checkout:
-
-```bash
-export ICONIFY_JSON_DIR=./node_modules/@iconify/json/json
-```
-
-The build script also caches the packed Iconify data under `target/iconify-cache` to speed up rebuilds.
-
-4. Add it to your `book.toml`:
+Copy `book.toml.example` into your book and keep the preprocessor entry:
 
 ```toml
 [preprocessor.icons]
