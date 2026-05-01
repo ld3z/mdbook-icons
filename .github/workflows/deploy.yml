@@ -21,7 +21,7 @@ jobs:
       - name: Install mdBook
         uses: taiki-e/install-action@v2
         with:
-          tool: mdbook@0.4
+          tool: mdbook@0.5
 
       - name: Install mdBook Icons
         uses: taiki-e/install-action@v2
