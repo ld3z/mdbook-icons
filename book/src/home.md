@@ -42,7 +42,7 @@ Icons can be mixed into any normal Markdown content:
 | Code example | :twemoji-glowing-star: |
 
 > [!IMPORTANT]
-> Icons get centered in tables with no text!
+> Icons get centered in tables with no text from version 0.2.3^!
 
 ## Finding more icons
 

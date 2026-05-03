@@ -1,6 +1,6 @@
 [package]
 name = "mdbook-icons"
-version = "0.2.3"
+version = "0.2.4"
 edition = "2024"
 description = "An mdBook preprocessor that replaces Iconify shortcodes with inline SVG."
 license = "MIT"
@@ -9,7 +9,7 @@ readme = "README.md"
 keywords = ["mdbook", "iconify", "icons"]
 categories = ["command-line-utilities", "rendering"]
 build = "build.rs"
-exclude = ["book/**", "target/**"]
+exclude = ["book/**", "target/**", ".github/**"]
 
 [dependencies]
 anyhow = "1"
