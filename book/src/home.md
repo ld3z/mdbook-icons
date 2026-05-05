@@ -54,3 +54,7 @@ Browse the icon catalog at [icones.js.org](https://icones.js.org/).
 | --- | --- |
 | Custom shortcode mappings | :twemoji-hourglass-not-done: |
 | Custom icon sets | :twemoji-hourglass-not-done: |
+
+## Working Versions
+
+This crate should work with every mdBook version since it does not use any specific mdBook features
