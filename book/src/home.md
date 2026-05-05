@@ -54,10 +54,3 @@ Browse the icon catalog at [icones.js.org](https://icones.js.org/).
 | --- | --- |
 | Custom shortcode mappings | :twemoji-hourglass-not-done: |
 | Custom icon sets | :twemoji-hourglass-not-done: |
-
-### Tested versions
-
-| Version | Status |
-| --- | --- |
-| mdBook 0.5 | :twemoji-check-mark-button: |
-| mdBook 0.4 | :twemoji-check-mark-button: |
