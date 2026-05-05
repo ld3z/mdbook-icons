@@ -199,11 +199,15 @@ fn extract_from_local_dir(dir: &Path) -> Result<Vec<(String, Vec<u8>)>> {
 }
 
 fn extract_from_tarball(tarball_url: &str) -> Result<Vec<(String, Vec<u8>)>> {
+    const TARBALL_LIMIT: u64 = 100 * 1024 * 1024;
+
     let mut response = ureq::get(tarball_url)
         .call()
         .with_context(|| format!("downloading {tarball_url}"))?;
     let bytes = response
         .body_mut()
+        .with_config()
+        .limit(TARBALL_LIMIT)
         .read_to_vec()
         .context("reading tarball response")?;
 
