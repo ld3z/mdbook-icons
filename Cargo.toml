@@ -1,6 +1,6 @@
 [package]
 name = "mdbook-icons"
-version = "0.2.4"
+version = "0.2.5"
 edition = "2024"
 description = "An mdBook preprocessor that replaces Iconify shortcodes with inline SVG."
 license = "MIT"
@@ -12,18 +12,17 @@ build = "build.rs"
 exclude = ["book/**", "target/**", ".github/**"]
 
 [dependencies]
-anyhow = "1"
-clap = { version = "4.6.0", features = ["derive"] }
-flate2 = "1"
-mdbook = "0.4"
-once_cell = "1"
-regex = "1"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+anyhow = "1.0.102"
+clap = { version = "4.6.1", features = ["derive"] }
+flate2 = "1.1.9"
+once_cell = "1.21.4"
+regex = "1.12.3"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
 
 [build-dependencies]
-anyhow = "1"
-flate2 = "1"
-serde = { version = "1", features = ["derive"] }
-ureq = { version = "2", features = ["json"] }
-tar = "0.4"
+anyhow = "1.0.102"
+flate2 = "1.1.9"
+serde = { version = "1.0.228", features = ["derive"] }
+ureq = { version = "3.3.0", features = ["json"] }
+tar = "0.4.45"

@@ -163,10 +163,12 @@ fn resolve_source() -> Result<Source> {
         .unwrap_or_else(|_| "2.2.468".to_string());
     let metadata_url = format!("https://registry.npmjs.org/@iconify/json/{version}");
 
-    let meta: NpmMeta = ureq::get(&metadata_url)
+    let mut meta_response = ureq::get(&metadata_url)
         .call()
-        .with_context(|| format!("downloading Iconify package metadata for version {version}"))?
-        .into_json()
+        .with_context(|| format!("downloading Iconify package metadata for version {version}"))?;
+    let meta: NpmMeta = meta_response
+        .body_mut()
+        .read_json()
         .with_context(|| format!("parsing Iconify package metadata for version {version}"))?;
 
     Ok(Source::Remote {
@@ -197,13 +199,12 @@ fn extract_from_local_dir(dir: &Path) -> Result<Vec<(String, Vec<u8>)>> {
 }
 
 fn extract_from_tarball(tarball_url: &str) -> Result<Vec<(String, Vec<u8>)>> {
-    let response = ureq::get(tarball_url)
+    let mut response = ureq::get(tarball_url)
         .call()
         .with_context(|| format!("downloading {tarball_url}"))?;
-    let mut bytes = Vec::new();
-    response
-        .into_reader()
-        .read_to_end(&mut bytes)
+    let bytes = response
+        .body_mut()
+        .read_to_vec()
         .context("reading tarball response")?;
 
     let decoder = flate2::read::GzDecoder::new(bytes.as_slice());
