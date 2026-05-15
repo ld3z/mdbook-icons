@@ -39,7 +39,7 @@ Icons can be mixed into any normal Markdown content:
 | --- | --- |
 | Inline icon | Hello :mdi-github: world! |
 | Header icon | Hello :twemoji-waving-hand: |
-| Code example | :twemoji-glowing-star: |
+| Code example | :star: |
 
 > [!IMPORTANT]
 > Icons get centered in tables with no text from version 0.2.3^!

@@ -5,6 +5,8 @@ language = "en"
 
 [preprocessor.icons]
 command = "mdbook-icons"
+[preprocessor.icons.aliases]
+star = ":twemoji-glowing-star:"
 
 [output.html]
 admonitions = true
