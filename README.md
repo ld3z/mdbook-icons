@@ -17,6 +17,9 @@ Add this to your book's `book.toml`:
 ```toml
 [preprocessor.icons]
 command = "mdbook-icons"
+
+[preprocessor.icons.aliases]
+star = "twemoji-glowing-star"
 ```
 
 You can also check out a working example on my GitHub Pages site: [mdbook-icons example](https://ld3z.github.io/mdbook-icons/).
@@ -33,3 +36,14 @@ In Markdown:
 ```
 
 The preprocessor will replace the shortcode with inline SVG from Iconify.
+
+## Custom aliases
+
+Define your own shortcodes by adding an `aliases` table under `[preprocessor.icons]`. Values can be written with or without surrounding colons.
+
+```toml
+[preprocessor.icons.aliases]
+star = ":twemoji-glowing-star:"
+```
+
+Then use `:star:` in Markdown.

@@ -10,12 +10,18 @@ mod generated {
 #[derive(Debug)]
 pub struct IconStore {
     cache: Mutex<HashMap<String, Collection>>,
+    aliases: HashMap<String, String>,
 }
 
 impl IconStore {
     pub fn new() -> Self {
+        Self::with_aliases(HashMap::new())
+    }
+
+    pub fn with_aliases(aliases: HashMap<String, String>) -> Self {
         Self {
             cache: Mutex::new(HashMap::new()),
+            aliases,
         }
     }
 
@@ -24,7 +30,8 @@ impl IconStore {
     }
 
     pub(crate) fn render_shortcode_result(&self, shortcode: &str) -> Result<Option<String>> {
-        let Some((prefix, name)) = self.split_shortcode(shortcode) else {
+        let resolved = self.resolve_user_alias(shortcode)?;
+        let Some((prefix, name)) = self.split_shortcode(&resolved) else {
             return Ok(None);
         };
         let icon = self.resolve_icon(&prefix, &name)?;
@@ -46,6 +53,20 @@ impl IconStore {
         }
 
         best
+    }
+
+    fn resolve_user_alias(&self, shortcode: &str) -> Result<String> {
+        let mut current = shortcode.to_string();
+        let mut visited = HashSet::new();
+
+        while let Some(next) = self.aliases.get(&current) {
+            if !visited.insert(current.clone()) {
+                return Err(anyhow!("user alias cycle detected: {shortcode}"));
+            }
+            current = next.clone();
+        }
+
+        Ok(current)
     }
 
     fn resolve_icon(&self, prefix: &str, name: &str) -> Result<ResolvedIcon> {
@@ -226,4 +247,22 @@ fn icon_transform(
     }
 
     Some(transforms.join(" "))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn renders_user_alias_shortcode() {
+        let mut aliases = HashMap::new();
+        aliases.insert("star".to_string(), "twemoji-glowing-star".to_string());
+        let store = IconStore::with_aliases(aliases);
+
+        let rendered = store
+            .render_shortcode("star")
+            .expect("user alias should render");
+
+        assert!(rendered.contains("<svg"), "alias should return svg");
+    }
 }

@@ -6,10 +6,39 @@ use iconify::IconStore;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde_json::Value;
+use std::collections::HashMap;
 use std::io;
 
 static SHORTCODE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r":([A-Za-z0-9_-]+):").unwrap());
 static TABLE_SHORTCODE_ONLY_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^:([A-Za-z0-9_-]+):$").unwrap());
+
+fn normalize_shortcode(value: &str) -> String {
+    value.trim().trim_matches(':').to_string()
+}
+
+fn load_aliases(context: &Value) -> HashMap<String, String> {
+    let mut aliases_map = HashMap::new();
+    let aliases = context
+        .get("config")
+        .and_then(|config| config.get("preprocessor"))
+        .and_then(|preprocessor| preprocessor.get("icons"))
+        .and_then(|icons| icons.get("aliases"))
+        .and_then(Value::as_object);
+
+    if let Some(aliases) = aliases {
+        for (key, value) in aliases {
+            if let Some(value) = value.as_str() {
+                let alias = normalize_shortcode(key);
+                let target = normalize_shortcode(value);
+                if !alias.is_empty() && !target.is_empty() {
+                    aliases_map.insert(alias, target);
+                }
+            }
+        }
+    }
+
+    aliases_map
+}
 
 fn replace_in_book(book: &mut Value, store: &IconStore) -> Result<()> {
     let items = if let Some(items) = book.get_mut("sections").and_then(Value::as_array_mut) {
@@ -179,12 +208,19 @@ fn main() -> Result<()> {
     let mut input: Value =
         serde_json::from_reader(stdin).context("failed to parse mdbook preprocessing input")?;
 
+    let context = input
+        .as_array()
+        .and_then(|items| items.get(0))
+        .cloned()
+        .ok_or_else(|| anyhow!("mdBook input must be a tuple of (context, book)"))?;
+
     let book = input
         .as_array_mut()
         .and_then(|items| items.get_mut(1))
         .ok_or_else(|| anyhow!("mdBook input must be a tuple of (context, book)"))?;
 
-    let store = IconStore::new();
+    let aliases = load_aliases(&context);
+    let store = IconStore::with_aliases(aliases);
     replace_in_book(book, &store).context("failed to process book contents")?;
 
     serde_json::to_writer(io::stdout(), book).context("failed to write processed book")?;
