@@ -17,9 +17,6 @@ Add this to your book's `book.toml`:
 ```toml
 [preprocessor.icons]
 command = "mdbook-icons"
-
-[preprocessor.icons.aliases]
-star = "twemoji-glowing-star"
 ```
 
 You can also check out a working example on my GitHub Pages site: [mdbook-icons example](https://ld3z.github.io/mdbook-icons/).
