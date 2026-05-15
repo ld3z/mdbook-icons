@@ -10,7 +10,8 @@ star = ":twemoji-glowing-star:"
 done = ":twemoji-check-mark-button:"
 not-done = ":twemoji-hourglass-not-done:"
 github = ":mdi-github:"
-docker = ":simple-icons-docker:"
+docker = ":skill-icons-docker:"
+rust = ":mdi-languages-rust:"
 
 [output.html]
 admonitions = true
