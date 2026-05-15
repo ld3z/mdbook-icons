@@ -16,7 +16,7 @@ When the book is built, the shortcode is replaced with the matching icon.
 
 You can drop icons right into a sentence:
 
-The project is on :mdi-github: GitHub and does not use :skill-icons-docker: Docker. But is written entirely in [Rust!:mdi-language-rust:](https://rust-lang.org/)
+The project is on :github: GitHub and does not use :docker: Docker. But is written entirely in [Rust!:rust:](https://rust-lang.org/)
 
 ### Icons in headings
 
