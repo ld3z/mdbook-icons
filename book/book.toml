@@ -11,7 +11,7 @@ done = ":twemoji-check-mark-button:"
 not-done = ":twemoji-hourglass-not-done:"
 github = ":mdi-github:"
 docker = ":skill-icons-docker:"
-rust = ":mdi-languages-rust:"
+rust = ":mdi-language-rust:"
 
 [output.html]
 admonitions = true
