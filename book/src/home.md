@@ -52,8 +52,19 @@ Browse the icon catalog at [icones.js.org](https://icones.js.org/).
 
 | Feature | Status |
 | --- | --- |
-| Custom shortcode mappings | :twemoji-hourglass-not-done: |
-| Custom icon sets | :twemoji-hourglass-not-done: |
+| Custom shortcode mappings | :done: |
+| Custom icon sets | :not-done: |
+
+## Custom aliases
+
+As of mdbook-icons v0.2.6 you can define your own shortcodes by adding an `aliases` table under `[preprocessor.icons]`. Values can be written with or without surrounding colons.
+
+```toml
+[preprocessor.icons.aliases]
+star = ":twemoji-glowing-star:"
+```
+
+Then use `:star:` in Markdown.
 
 ## Working Versions
 
