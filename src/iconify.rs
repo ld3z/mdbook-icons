@@ -14,6 +14,7 @@ pub struct IconStore {
 }
 
 impl IconStore {
+    #[cfg(test)]
     pub fn new() -> Self {
         Self::with_aliases(HashMap::new())
     }
