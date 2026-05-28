@@ -28,10 +28,10 @@ Icons also work in headings, which makes section titles feel a little more expre
 
 Icons can be mixed into any normal Markdown content:
 
-- :twemoji-check-mark-button: Supported in regular text
-- :twemoji-check-mark-button: Supported in headings
-- :twemoji-check-mark-button: Supported in tables
-- :twemoji-check-mark-button: Supported wherever Markdown is rendered
+- :done: Supported in regular text
+- :done: Supported in headings
+- :done: Supported in tables
+- :done: Supported wherever Markdown is rendered
 
 ### Tables
 
