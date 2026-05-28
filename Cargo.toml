@@ -1,6 +1,6 @@
 [package]
 name = "mdbook-icons"
-version = "0.2.6"
+version = "0.2.7"
 edition = "2024"
 description = "An mdBook preprocessor that replaces Iconify shortcodes with inline SVG."
 license = "MIT"
