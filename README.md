@@ -21,6 +21,28 @@ command = "mdbook-icons"
 
 You can also check out a working example on my GitHub Pages site: [mdbook-icons example](https://ld3z.github.io/mdbook-icons/).
 
+## Updating the Iconify pack
+
+The Iconify data used by this project is pinned in `iconify-json.version`. To update it to the latest release, run:
+
+```bash
+mdbook-icons update
+```
+
+You can also pin a specific version:
+
+```bash
+mdbook-icons update --version 2.2.481
+```
+
+To check whether your pinned version is already current without changing anything:
+
+```bash
+mdbook-icons update --check
+```
+
+After updating the version file, rebuild the project and the new icon pack will be downloaded automatically.
+
 ## Usage
 
 Find icon names and prefixes at [icones.js.org](https://icones.js.org/).

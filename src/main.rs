@@ -5,12 +5,16 @@ use clap::{Parser, Subcommand};
 use iconify::IconStore;
 use once_cell::sync::Lazy;
 use regex::Regex;
+use serde::Deserialize;
 use serde_json::Value;
 use std::collections::HashMap;
+use std::fs;
 use std::io;
+use std::path::PathBuf;
 
 static SHORTCODE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r":([A-Za-z0-9_-]+):").unwrap());
-static TABLE_SHORTCODE_ONLY_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^:([A-Za-z0-9_-]+):$").unwrap());
+static TABLE_SHORTCODE_ONLY_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^:([A-Za-z0-9_-]+):$").unwrap());
 
 fn normalize_shortcode(value: &str) -> String {
     value.trim().trim_matches(':').to_string()
@@ -195,13 +199,53 @@ enum Command {
         /// The renderer name passed by mdBook.
         renderer: String,
     },
+    /// Update the pinned Iconify pack version used by this project.
+    Update {
+        /// Use a specific Iconify JSON version instead of the latest release.
+        #[arg(long)]
+        version: Option<String>,
+        /// Check whether the pinned Iconify JSON version is already up to date.
+        #[arg(long)]
+        check: bool,
+    },
 }
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    if let Some(Command::Supports { renderer }) = cli.command {
-        std::process::exit(if renderer == "html" { 0 } else { 1 });
+    match cli.command {
+        Some(Command::Supports { renderer }) => {
+            std::process::exit(if renderer == "html" { 0 } else { 1 });
+        }
+        Some(Command::Update { version, check }) => {
+            let target_version = match version {
+                Some(version) => version,
+                None if check => fetch_latest_iconify_version()?,
+                None => fetch_latest_iconify_version()?,
+            };
+
+            if check {
+                let path = find_iconify_version_file();
+                let current_version = read_iconify_version_file(&path)?;
+                if current_version == target_version {
+                    println!("{} is up to date ({})", path.display(), current_version);
+                    return Ok(());
+                }
+
+                println!(
+                    "{} is out of date: current {}, latest {}",
+                    path.display(),
+                    current_version,
+                    target_version
+                );
+                std::process::exit(1);
+            }
+
+            let path = write_iconify_version_file(&target_version)?;
+            println!("Updated {} to {}", path.display(), target_version);
+            return Ok(());
+        }
+        None => {}
     }
 
     let stdin = io::stdin();
@@ -225,6 +269,51 @@ fn main() -> Result<()> {
 
     serde_json::to_writer(io::stdout(), book).context("failed to write processed book")?;
     Ok(())
+}
+
+#[derive(Debug, Deserialize)]
+struct NpmLatestMeta {
+    version: String,
+}
+
+fn fetch_latest_iconify_version() -> Result<String> {
+    let url = "https://registry.npmjs.org/@iconify/json/latest";
+    let mut response = ureq::get(url)
+        .call()
+        .with_context(|| format!("downloading Iconify package metadata from {url}"))?;
+    let meta: NpmLatestMeta = response
+        .body_mut()
+        .read_json()
+        .context("parsing latest Iconify package metadata")?;
+    Ok(meta.version)
+}
+
+fn write_iconify_version_file(version: &str) -> Result<PathBuf> {
+    let path = find_iconify_version_file();
+    fs::write(&path, format!("{version}\n"))
+        .with_context(|| format!("writing {}", path.display()))?;
+    Ok(path)
+}
+
+fn read_iconify_version_file(path: &PathBuf) -> Result<String> {
+    let version =
+        fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
+    Ok(version.trim().to_string())
+}
+
+fn find_iconify_version_file() -> PathBuf {
+    let mut dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+    loop {
+        let candidate = dir.join("iconify-json.version");
+        if candidate.is_file() {
+            return candidate;
+        }
+        if !dir.pop() {
+            break;
+        }
+    }
+
+    PathBuf::from("iconify-json.version")
 }
 
 #[cfg(test)]
