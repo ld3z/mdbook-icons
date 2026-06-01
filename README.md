@@ -21,7 +21,7 @@ command = "mdbook-icons"
 
 You can also check out a working example on my GitHub Pages site: [mdbook-icons example](https://ld3z.github.io/mdbook-icons/).
 
-## Updating the Iconify pack
+## Updating Icons
 
 The Iconify data used by this project is pinned in `iconify-json.version`. To update it to the latest release, run:
 
