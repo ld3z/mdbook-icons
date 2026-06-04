@@ -53,6 +53,7 @@ Browse the icon catalog at [icones.js.org](https://icones.js.org/).
 | Feature | Status |
 | --- | --- |
 | Custom shortcode mappings | :done: |
+| Updating command | :done: |
 | Custom icon sets | :not-done: |
 
 ## Custom aliases
