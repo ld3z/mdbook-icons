@@ -67,6 +67,10 @@ star = ":twemoji-glowing-star:"
 
 Then use `:star:` in Markdown.
 
+## Faster Installing
+
+As of mdbook-icons v0.3.2, we supply prebuilt binaries from GitHub for use with ```cargo-binstall```
+
 ## Working Versions
 
 This crate should work with every mdBook version since it does not use any specific mdBook features
