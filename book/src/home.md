@@ -46,7 +46,7 @@ Icons can be mixed into any normal Markdown content:
 
 ## Finding more icons
 
-Browse the icon catalog at [icones.js.org](https://icones.js.org/).
+Browse the icon catalog at [Icones](https://icones.js.org/).
 
 ## Roadmap
 
