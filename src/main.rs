@@ -302,18 +302,7 @@ fn read_iconify_version_file(path: &PathBuf) -> Result<String> {
 }
 
 fn find_iconify_version_file() -> PathBuf {
-    let mut dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-    loop {
-        let candidate = dir.join("iconify-json.version");
-        if candidate.is_file() {
-            return candidate;
-        }
-        if !dir.pop() {
-            break;
-        }
-    }
-
-    PathBuf::from("iconify-json.version")
+    iconify::find_version_file().unwrap_or_else(|| PathBuf::from(iconify::VERSION_FILE_NAME))
 }
 
 #[cfg(test)]

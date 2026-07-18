@@ -8,22 +8,14 @@ repository = "https://github.com/ld3z/mdbook-icons"
 readme = "README.md"
 keywords = ["mdbook", "iconify", "icons"]
 categories = ["command-line-utilities", "rendering"]
-build = "build.rs"
 exclude = ["book/**", "target/**", ".github/**"]
 
 [dependencies]
 anyhow = "1.0.103"
 clap = { version = "4.6.2", features = ["derive"] }
-flate2 = "1.1.9"
+dirs = "6.0.0"
 once_cell = "1.21.4"
 regex = "1.13.1"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.150"
 ureq = { version = "3.3.0", features = ["json"] }
-
-[build-dependencies]
-anyhow = "1.0.103"
-flate2 = "1.1.9"
-serde = { version = "1.0.228", features = ["derive"] }
-ureq = { version = "3.3.0", features = ["json"] }
-tar = "0.4.46"
