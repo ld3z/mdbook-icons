@@ -6,6 +6,16 @@ An mdbook preprocessor that turns icon shortcodes into SVGs from Iconify.
 
 ## Install
 
+Prebuilt binaries for Linux, macOS, and Windows are attached to each
+[GitHub release](https://github.com/ld3z/mdbook-icons/releases). The fastest
+way to install one is with [cargo-binstall](https://github.com/cargo-bins/cargo-binstall):
+
+```bash
+cargo binstall mdbook-icons
+```
+
+Or build from source:
+
 ```bash
 cargo install mdbook-icons
 ```
