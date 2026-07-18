@@ -46,6 +46,7 @@ jobs:
       - uses: taiki-e/upload-rust-binary-action@v1
         with:
           bin: mdbook-icons
+          # $tag includes the leading "v", e.g. mdbook-icons-v0.3.2-x86_64-unknown-linux-gnu.tar.gz
+          archive: $bin-$tag-$target
           target: ${{ matrix.target }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          checksum: sha256
