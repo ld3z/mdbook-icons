@@ -1,14 +1,14 @@
 # mdbook-icons
 
-Replace Iconify shortcodes like `:mdi-home:` and `:twemoji-glowing-star:` with inline SVG in mdBook.
+Turn Iconify shortcodes (e.g. `:mdi-home:`, `:twemoji-glowing-star:`) into inline SVGs in mdBook.
 
-An mdbook preprocessor that turns icon shortcodes into SVGs from Iconify.
+A small mdBook preprocessor that replaces icon shortcodes with SVG from Iconify.
 
-## Install
+## Quick install
 
-Prebuilt binaries for Linux, macOS, and Windows are attached to each
-[GitHub release](https://github.com/ld3z/mdbook-icons/releases). The fastest
-way to install one is with [cargo-binstall](https://github.com/cargo-bins/cargo-binstall):
+Prebuilt binaries are attached to each release: https://github.com/ld3z/mdbook-icons/releases
+
+Install with cargo-binstall (recommended):
 
 ```bash
 cargo binstall mdbook-icons
@@ -20,78 +20,70 @@ Or build from source:
 cargo install mdbook-icons
 ```
 
-## Configure `book.toml`
+## Configure
 
-Add this to your book's `book.toml`:
+Add the preprocessor to your `book.toml`:
 
 ```toml
 [preprocessor.icons]
 command = "mdbook-icons"
 ```
 
-You can also check out a working example on my GitHub Pages site: [mdbook-icons example](https://ld3z.github.io/mdbook-icons/).
-
-## How icon data is fetched
-
-Icon collections are downloaded on demand the first time a book uses them, and
-cached on disk (`~/.cache/mdbook-icons/` on Linux, the equivalent user cache
-directory on macOS and Windows). Only the collections your book actually
-references are fetched — typically a few hundred kilobytes — and subsequent
-builds are served entirely from the cache, so no network access is needed.
-
-For fully offline environments, point `ICONIFY_JSON_DIR` at a local copy of the
-[`@iconify/json`](https://www.npmjs.com/package/@iconify/json) package (either
-the package root or its `json/` directory) and no downloads will ever happen.
-
-## Updating Icons
-
-The Iconify data version is pinned. It resolves in this order:
-
-1. The `ICONIFY_JSON_VERSION` environment variable.
-2. An `iconify-json.version` file found in the current directory or any parent
-   (so a book repository can pin its own version).
-3. The version this binary was released with.
-
-To update a pinned `iconify-json.version` file to the latest release, run:
-
-```bash
-mdbook-icons update
-```
-
-You can also pin a specific version:
-
-```bash
-mdbook-icons update --version 2.2.481
-```
-
-To check whether your pinned version is already current without changing anything:
-
-```bash
-mdbook-icons update --check
-```
-
-After updating the version file, the next `mdbook build` will fetch icon data for the new version automatically.
-
 ## Usage
 
-Find icon names and prefixes at [icones.js.org](https://icones.js.org/).
-
-In Markdown:
+Find collection prefixes and icon names at https://icones.js.org/ and use shortcodes in Markdown:
 
 ```md
 :mdi-home: Home
 :twemoji-glowing-star: Star
 ```
 
-The preprocessor will replace the shortcode with inline SVG from Iconify.
+On `mdbook build` the shortcodes are replaced with inline SVG.
+
+## Cache & offline
+
+Icon collections are downloaded on demand and cached per-user (e.g. `~/.cache/mdbook-icons/` on Linux). Only collections your book uses are fetched, and subsequent builds read from the cache so they work offline.
+
+To use a local copy of the Iconify JSON data (fully offline), set either:
+
+- `ICONIFY_JSON_DIR` to point at a local `@iconify/json` package (the package root or its `json/` dir), or
+- add an `iconify-json.version` file in your repo (or a parent directory) to pin a version.
+
+## Updating the icon data
+
+The Iconify data version is resolved in this order:
+
+1. `ICONIFY_JSON_VERSION` environment variable
+2. `iconify-json.version` file in the current directory or any parent
+3. The version bundled with this binary
+
+Update the pinned version (or create a version file):
+
+```bash
+mdbook-icons update
+# or pin a specific release
+mdbook-icons update --version 2.2.481
+# check current pin without changing
+mdbook-icons update --check
+```
+
+After updating the version file, the next `mdbook build` will fetch the new icon data.
 
 ## Custom aliases
 
-Define your own shortcodes by adding an `aliases` table under `[preprocessor.icons]`. Values can be written with or without surrounding colons.
+You can define short aliases in `book.toml` under `[preprocessor.icons.aliases]`. Values may include surrounding colons or not.
 
 ```toml
 [preprocessor.icons.aliases]
 star = ":twemoji-glowing-star:"
 ```
 
-Then use `:star:` in Markdown.
+Then use `:star:` in your Markdown.
+
+## Examples & links
+
+- Example site: https://ld3z.github.io/mdbook-icons/
+- Icon search: https://icones.js.org/
+- Iconify JSON package: https://www.npmjs.com/package/@iconify/json
+
+License: MIT
