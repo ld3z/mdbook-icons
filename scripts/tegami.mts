@@ -4,6 +4,24 @@ import { cargo } from "tegami/plugins/cargo";
 import { github } from "tegami/plugins/github";
 
 /**
+ * crates.io answers 403 to unidentified clients under its data access policy, and
+ * the cargo plugin's publish check calls `fetch` without a User-Agent (tegami 1.3.4),
+ * which fails every publish. Remove once the plugin sends its own.
+ */
+const upstreamFetch = globalThis.fetch;
+globalThis.fetch = (input, init) => {
+  const url =
+    typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+  if (!url.startsWith("https://crates.io/")) return upstreamFetch(input, init);
+
+  const headers = new Headers(
+    init?.headers ?? (input instanceof Request ? input.headers : undefined),
+  );
+  headers.set("User-Agent", "mdbook-icons release (https://github.com/ld3z/mdbook-icons)");
+  return upstreamFetch(input, { ...init, headers });
+};
+
+/**
  * The git plugin tags releases as `{name}@{version}`, but the `binstall` metadata in
  * Cargo.toml resolves assets under `v{version}` and every existing release uses that
  * form. `enforce: "pre"` claims the tag before the git plugin applies its default.
