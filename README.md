@@ -1,5 +1,7 @@
 # mdbook-icons
 
+[![crates.io downloads](https://img.shields.io/crates/dt/mdbook-icons.svg)](https://crates.io/crates/mdbook-icons)
+
 Turn Iconify shortcodes (e.g. `:mdi-home:`, `:twemoji-glowing-star:`) into inline SVGs in mdBook.
 
 A small mdBook preprocessor that replaces icon shortcodes with SVG from Iconify.
@@ -42,7 +44,7 @@ On `mdbook build` the shortcodes are replaced with inline SVG.
 
 ## Cache & offline
 
-Icon collections are downloaded on demand and cached per-user (e.g. `~/.cache/mdbook-icons/` on Linux). Only collections your book uses are fetched, and subsequent builds read from the cache so they work offline.
+Icon collections are downloaded on demand and cached per-user (e.g. `~/.cache/mdbook-icons/` on Linux). Only collections your book uses are fetched, and subsequent builds read from the cache so they're fast.
 
 To use a local copy of the Iconify JSON data (fully offline), set either:
 
