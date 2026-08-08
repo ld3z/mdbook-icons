@@ -1,0 +1,11 @@
+{
+  "name": "mdbook-icons-release",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "tegami": "node scripts/tegami.mts"
+  },
+  "devDependencies": {
+    "tegami": "^1.3.4"
+  }
+}

@@ -1,26 +1,67 @@
-name: Release binaries
-
-permissions:
-  contents: write
+name: Release
 
 on:
   push:
-    tags:
-      - "v*"
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
-  create-release:
+  release:
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.detect.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
-
-      # Also verifies that the tag matches the version in Cargo.toml.
-      - uses: taiki-e/create-gh-release-action@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Record tags before release
+        run: git tag | sort > /tmp/tags-before
+
+      # Opens a Version Packages PR when changelogs are pending, otherwise publishes
+      # the crate from the committed publish lock.
+      - name: Version & publish
+        run: pnpm tegami ci
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+      # Tags pushed with GITHUB_TOKEN do not start another workflow run, so the
+      # binaries are built here rather than from a tag trigger.
+      - name: Detect newly created tag
+        id: detect
+        run: |
+          git tag | sort > /tmp/tags-after
+          tag=$(comm -13 /tmp/tags-before /tmp/tags-after | head -n1)
+          if [ -n "${tag}" ]; then
+            echo "Release tag created: ${tag}"
+            echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          else
+            echo "No release tag created."
+          fi
 
   upload-assets:
-    needs: create-release
+    needs: release
+    if: needs.release.outputs.tag != ''
     strategy:
       fail-fast: false
       matrix:
@@ -42,6 +83,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release.outputs.tag }}
 
       - uses: taiki-e/upload-rust-binary-action@v1
         with:
@@ -49,4 +92,5 @@ jobs:
           # $tag includes the leading "v", e.g. mdbook-icons-v0.3.2-x86_64-unknown-linux-gnu.tar.gz
           archive: $bin-$tag-$target
           target: ${{ matrix.target }}
+          ref: refs/tags/${{ needs.release.outputs.tag }}
           token: ${{ secrets.GITHUB_TOKEN }}

@@ -8,7 +8,17 @@ repository = "https://github.com/ld3z/mdbook-icons"
 readme = "README.md"
 keywords = ["mdbook", "iconify", "icons"]
 categories = ["command-line-utilities", "rendering"]
-exclude = ["book/**", "target/**", ".github/**"]
+exclude = [
+    "book/**",
+    "target/**",
+    ".github/**",
+    ".tegami/**",
+    "node_modules/**",
+    "scripts/**",
+    "package.json",
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml",
+]
 
 [package.metadata.binstall]
 pkg-url = "{ repo }/releases/download/v{ version }/{ name }-v{ version }-{ target }.tar.gz"
