@@ -1,0 +1,9 @@
+core:changelogs:
+  - content: "---\npackages:\n  cargo:mdbook-icons:\n    type: patch\n---\n\n## Added Tegami releases\n"
+    filename: 2026-08-08-mskvewoq.md
+    v: 0.0.0
+core:packages:
+  - changelogIds:
+      - 2026-08-08-mskvewoq.md
+    id: cargo:mdbook-icons
+    updated: true
