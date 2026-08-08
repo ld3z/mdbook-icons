@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - main
+    # Book content is excluded from the crate, so docs-only pushes cannot release.
+    # Commits touching both the book and the crate still run.
+    paths-ignore:
+      - 'book/**'
+  # Lets a failed publish be retried without an unrelated commit.
+  workflow_dispatch:
 
 permissions:
   contents: write
