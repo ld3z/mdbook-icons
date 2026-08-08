@@ -69,7 +69,7 @@ Then use `:star:` in Markdown.
 
 ## Faster Installing
 
-As of mdbook-icons v0.3.2, we supply prebuilt binaries from GitHub for use with ```cargo-binstall```
+As of mdbook-icons v0.3.2, we supply prebuilt binaries from GitHub for use with ```cargo-binstall```!
 
 ## Working Versions
 
