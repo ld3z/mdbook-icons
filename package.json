@@ -2,6 +2,7 @@
   "name": "mdbook-icons-release",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@11.20.0",
   "scripts": {
     "tegami": "node scripts/tegami.mts"
   },
