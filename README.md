@@ -1,6 +1,6 @@
 # mdbook-icons
 
-[![crates.io downloads](https://img.shields.io/crates/dt/mdbook-icons.svg)](https://crates.io/crates/mdbook-icons)
+[![crates.io downloads](https://img.shields.io/crates/d/mdbook-icons?style=for-the-badge&logo=rust)](https://crates.io/crates/mdbook-icons)
 
 Turn Iconify shortcodes (e.g. `:mdi-home:`, `:twemoji-glowing-star:`) into inline SVGs in mdBook.
 
