@@ -9,8 +9,8 @@ importers:
   .:
     devDependencies:
       tegami:
-        specifier: ^1.3.4
-        version: 1.3.4
+        specifier: ^1.3.5
+        version: 1.3.5
 
 packages:
 
@@ -55,8 +55,8 @@ packages:
   sisteransi@1.0.5:
     resolution: {integrity: sha512-bLGGlR1QxBcynn2d5YmDX4MGjlZvy2MRBDRNHLJ8VI6l6+9FUiyTFNJ0IveOSP0bcXgVDPRcfGqA0pjaqUpfVg==}
 
-  tegami@1.3.4:
-    resolution: {integrity: sha512-6MPpdPIryYW5AnhWbVwIRaPnIn4sPu44qeBtHKapEvxSfQazGiaA3LxdvW0kC5t6houdMChPVz8CPADPHYfafw==}
+  tegami@1.3.5:
+    resolution: {integrity: sha512-RDqAaRNn6dZJ4xnGhAO1f3agxN4PHbCu8f0NQZ3OXxH0EMtIkQQWxYCDbBc4xWXsKJ0bXnEkxVJw2r/oVgAPnw==}
 
   tinyexec@1.3.0:
     resolution: {integrity: sha512-QKAl9m8gWWGHV8jZcPeym6j+XULi6tOf1mT83WYJ4Lk2ytW/uwAWkrP0uFsdoYMdueVJ0qs26wZ+23xeB4ibNQ==}
@@ -107,7 +107,7 @@ snapshots:
 
   sisteransi@1.0.5: {}
 
-  tegami@1.3.4:
+  tegami@1.3.5:
     dependencies:
       '@clack/prompts': 1.7.0
       '@rainbowatcher/toml-edit-js': 0.6.5
