@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 pub(crate) const VERSION_FILE_NAME: &str = "iconify-json.version";
 
@@ -176,7 +176,7 @@ pub(crate) fn find_version_file() -> Option<PathBuf> {
 pub struct IconStore {
     source: IconSource,
     prefixes: OnceCell<HashSet<String>>,
-    cache: Mutex<HashMap<String, Collection>>,
+    cache: Mutex<HashMap<String, Arc<Collection>>>,
     aliases: HashMap<String, String>,
 }
 
@@ -257,19 +257,21 @@ impl IconStore {
             .with_context(|| format!("failed to resolve icon {prefix}-{name}"))
     }
 
-    fn load_collection(&self, prefix: &str) -> Result<Collection> {
+    fn load_collection(&self, prefix: &str) -> Result<Arc<Collection>> {
         if let Some(collection) = self.cache.lock().unwrap().get(prefix).cloned() {
             return Ok(collection);
         }
 
         let bytes = self.source.collection_bytes(prefix)?;
-        let collection: Collection = serde_json::from_slice(&bytes)
-            .with_context(|| format!("failed to parse icon collection: {prefix}"))?;
+        let collection: Arc<Collection> = Arc::new(
+            serde_json::from_slice(&bytes)
+                .with_context(|| format!("failed to parse icon collection: {prefix}"))?,
+        );
 
         self.cache
             .lock()
             .unwrap()
-            .insert(prefix.to_string(), collection.clone());
+            .insert(prefix.to_string(), Arc::clone(&collection));
 
         Ok(collection)
     }
