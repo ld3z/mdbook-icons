@@ -1,0 +1,16 @@
+{
+  "prefix": "twemoji",
+  "width": 36,
+  "height": 36,
+  "icons": {
+    "glowing-star": {
+      "body": "<path fill=\"#ffac33\" d=\"M18 2l5 10l11 2l-8 8l2 11l-10-5l-10 5l2-11l-8-8l11-2z\"/>"
+    },
+    "check-mark-button": {
+      "body": "<path fill=\"#77b255\" d=\"M4 4h28v28H4z\"/>"
+    },
+    "gradient-star": {
+      "body": "<defs><linearGradient id=\"g\"><stop offset=\"0\" stop-color=\"#ff0\"/></linearGradient></defs><path fill=\"url(#g)\" d=\"M18 2l5 10h11z\"/>"
+    }
+  }
+}

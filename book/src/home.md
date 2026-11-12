@@ -42,7 +42,7 @@ Icons can be mixed into any normal Markdown content:
 | Code example | :star: |
 
 > [!IMPORTANT]
-> Icons get centered in tables with no text from version 0.2.3^!
+> Icons get centered in tables with no text from version 0.2.3^! Set `center-table-icons = false` under `[preprocessor.icons]` to opt out.
 
 ## Finding more icons
 
@@ -56,21 +56,30 @@ Browse the icon catalog at [Icones](https://icones.js.org/).
 | Updating command | :done: |
 | Custom icon sets | :not-done: |
 
-## Custom aliases
+## Configuration & aliases
 
-As of mdbook-icons v0.2.6 you can define your own shortcodes by adding an `aliases` table under `[preprocessor.icons]`. Values can be written with or without surrounding colons.
+Configure `mdbook-icons` in `book.toml` under `[preprocessor.icons]`:
 
 ```toml
+[preprocessor.icons]
+command = "mdbook-icons"
+# Optional:
+# version = "2.2.556"
+# center-table-icons = true
+# strict = false
+
 [preprocessor.icons.aliases]
 star = ":twemoji-glowing-star:"
 ```
 
-Then use `:star:` in Markdown.
+Values in `aliases` can be written with or without surrounding colons, then used as `:star:` in Markdown.
+
+Rendered icons include `.mdbook-icon` on each `<svg>` and `.mdbook-icon-cell` on centered table wrappers for custom CSS styling.
 
 ## Faster Installing
 
-As of mdbook-icons v0.3.2, we supply prebuilt binaries from GitHub for use with ```cargo-binstall```!
+As of mdbook-icons v0.3.2, we supply prebuilt binaries from GitHub for use with `cargo-binstall`!
 
 ## Working Versions
 
-This crate should work with every mdBook version since it does not use any specific mdBook features
+This crate should work with every mdBook version since it does not use any specific mdBook features.

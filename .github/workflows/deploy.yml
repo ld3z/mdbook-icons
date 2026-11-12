@@ -1,35 +1,52 @@
 name: Deploy
+
 on:
   push:
     branches:
       - main
     paths:
       - 'book/**'
+      - 'src/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'iconify-json.version'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write # To push a branch
-      pages: write # To push to a GitHub Pages site
-      id-token: write # To update the deployment status
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build mdBook Icons
+        run: |
+          cargo build --release --locked
+          echo "${GITHUB_WORKSPACE}/target/release" >> "${GITHUB_PATH}"
 
       - name: Install mdBook
         uses: taiki-e/install-action@v2
         with:
           tool: mdbook@0.5
 
-      - name: Install mdBook Icons
-        uses: taiki-e/cache-cargo-install-action@v3
-        with:
-          tool: mdbook-icons
-
       - name: Build Book
-        run: cd book && mdbook build
+        run: mdbook build book
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

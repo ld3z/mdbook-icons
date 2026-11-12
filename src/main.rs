@@ -1,50 +1,108 @@
 mod iconify;
 
 use anyhow::{Context, Result, anyhow};
-use clap::{Parser, Subcommand};
+use clap::{CommandFactory, Parser, Subcommand};
 use iconify::IconStore;
-use once_cell::sync::Lazy;
+use pulldown_cmark::{Event, Options, Parser as MarkdownParser, Tag, TagEnd};
 use regex::Regex;
 use serde::Deserialize;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::fs;
-use std::io;
-use std::path::PathBuf;
+use std::io::{self, IsTerminal};
+use std::ops::Range;
+use std::path::{Path, PathBuf};
+use std::sync::LazyLock;
 
-static SHORTCODE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r":([A-Za-z0-9_-]+):").unwrap());
-static TABLE_SHORTCODE_ONLY_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"^:([A-Za-z0-9_-]+):$").unwrap());
+static SHORTCODE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r":([A-Za-z0-9_-]+):").unwrap());
+static TABLE_SHORTCODE_ONLY_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^:([A-Za-z0-9_-]+):$").unwrap());
+
+#[derive(Debug, Clone, Copy)]
+struct TransformOptions {
+    center_table_icons: bool,
+    strict: bool,
+}
+
+impl Default for TransformOptions {
+    fn default() -> Self {
+        Self {
+            center_table_icons: true,
+            strict: false,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+struct PreprocessorConfig {
+    root: Option<PathBuf>,
+    version: Option<String>,
+    aliases: HashMap<String, String>,
+    options: TransformOptions,
+}
 
 fn normalize_shortcode(value: &str) -> String {
     value.trim().trim_matches(':').to_string()
 }
 
-fn load_aliases(context: &Value) -> HashMap<String, String> {
-    let mut aliases_map = HashMap::new();
-    let aliases = context
+fn load_config(context: &Value) -> Result<PreprocessorConfig> {
+    let root = context
+        .get("root")
+        .and_then(Value::as_str)
+        .map(PathBuf::from);
+
+    let mut cfg = PreprocessorConfig {
+        root,
+        ..PreprocessorConfig::default()
+    };
+
+    let Some(icons) = context
         .get("config")
         .and_then(|config| config.get("preprocessor"))
         .and_then(|preprocessor| preprocessor.get("icons"))
-        .and_then(|icons| icons.get("aliases"))
-        .and_then(Value::as_object);
+        .and_then(Value::as_object)
+    else {
+        return Ok(cfg);
+    };
 
-    if let Some(aliases) = aliases {
+    if let Some(version_val) = icons.get("version") {
+        let version = version_val
+            .as_str()
+            .ok_or_else(|| anyhow!("[preprocessor.icons] `version` must be a string"))?;
+        cfg.version = Some(iconify::validate_version(version)?.to_string());
+    }
+
+    if let Some(center_val) = icons
+        .get("center-table-icons")
+        .or_else(|| icons.get("center_table_icons"))
+    {
+        cfg.options.center_table_icons = center_val.as_bool().ok_or_else(|| {
+            anyhow!("[preprocessor.icons] `center-table-icons` must be a boolean")
+        })?;
+    }
+
+    if let Some(strict_val) = icons.get("strict") {
+        cfg.options.strict = strict_val
+            .as_bool()
+            .ok_or_else(|| anyhow!("[preprocessor.icons] `strict` must be a boolean"))?;
+    }
+
+    if let Some(aliases) = icons.get("aliases").and_then(Value::as_object) {
         for (key, value) in aliases {
             if let Some(value) = value.as_str() {
                 let alias = normalize_shortcode(key);
                 let target = normalize_shortcode(value);
                 if !alias.is_empty() && !target.is_empty() {
-                    aliases_map.insert(alias, target);
+                    cfg.aliases.insert(alias, target);
                 }
             }
         }
     }
 
-    aliases_map
+    Ok(cfg)
 }
 
-fn replace_in_book(book: &mut Value, store: &IconStore) -> Result<()> {
+fn replace_in_book(book: &mut Value, store: &IconStore, options: TransformOptions) -> Result<()> {
     let items = if let Some(items) = book.get_mut("sections").and_then(Value::as_array_mut) {
         items
     } else if let Some(items) = book.get_mut("items").and_then(Value::as_array_mut) {
@@ -54,13 +112,17 @@ fn replace_in_book(book: &mut Value, store: &IconStore) -> Result<()> {
     };
 
     for item in items {
-        replace_in_book_item(item, store)?;
+        replace_in_book_item(item, store, options)?;
     }
 
     Ok(())
 }
 
-fn replace_in_book_item(item: &mut Value, store: &IconStore) -> Result<()> {
+fn replace_in_book_item(
+    item: &mut Value,
+    store: &IconStore,
+    options: TransformOptions,
+) -> Result<()> {
     let Some(obj) = item.as_object_mut() else {
         return Ok(());
     };
@@ -70,16 +132,25 @@ fn replace_in_book_item(item: &mut Value, store: &IconStore) -> Result<()> {
             .as_object_mut()
             .ok_or_else(|| anyhow!("chapter item is not an object"))?;
 
+        let chapter_label = chapter
+            .get("path")
+            .and_then(Value::as_str)
+            .or_else(|| chapter.get("name").and_then(Value::as_str))
+            .unwrap_or("<unnamed chapter>")
+            .to_string();
+
         if let Some(content) = chapter.get_mut("content") {
             let content_str = content
                 .as_str()
                 .ok_or_else(|| anyhow!("chapter content is not a string"))?;
-            *content = Value::String(transform_markdown(content_str, store));
+            let transformed = transform_markdown_with_options(content_str, store, options)
+                .with_context(|| format!("failed to process chapter '{chapter_label}'"))?;
+            *content = Value::String(transformed);
         }
 
         if let Some(sub_items) = chapter.get_mut("sub_items").and_then(Value::as_array_mut) {
             for sub_item in sub_items {
-                replace_in_book_item(sub_item, store)?;
+                replace_in_book_item(sub_item, store, options)?;
             }
         }
     }
@@ -87,98 +158,211 @@ fn replace_in_book_item(item: &mut Value, store: &IconStore) -> Result<()> {
     Ok(())
 }
 
-fn transform_markdown(input: &str, store: &IconStore) -> String {
-    let mut out = String::new();
-    let mut in_fence = false;
+fn markdown_options() -> Options {
+    let mut options = Options::empty();
+    options.insert(Options::ENABLE_TABLES);
+    options.insert(Options::ENABLE_FOOTNOTES);
+    options.insert(Options::ENABLE_STRIKETHROUGH);
+    options.insert(Options::ENABLE_TASKLISTS);
+    options.insert(Options::ENABLE_HEADING_ATTRIBUTES);
+    options.insert(Options::ENABLE_GFM);
+    options.insert(Options::ENABLE_YAML_STYLE_METADATA_BLOCKS);
+    options.insert(Options::ENABLE_PLUSES_DELIMITED_METADATA_BLOCKS);
+    options
+}
 
-    for line in input.lines() {
-        let trimmed = line.trim_start();
-        if trimmed.starts_with("```") || trimmed.starts_with("~~~") {
-            in_fence = !in_fence;
-            out.push_str(line);
-            out.push('\n');
-            continue;
-        }
+fn should_skip_tag(tag: &Tag<'_>) -> bool {
+    matches!(
+        tag,
+        Tag::CodeBlock(_) | Tag::Image { .. } | Tag::MetadataBlock(_)
+    )
+}
 
-        if in_fence {
-            out.push_str(line);
-            out.push('\n');
-            continue;
-        }
+fn should_skip_tag_end(tag_end: &TagEnd) -> bool {
+    matches!(
+        tag_end,
+        TagEnd::CodeBlock | TagEnd::Image | TagEnd::MetadataBlock(_)
+    )
+}
 
-        if looks_like_table_row(line) {
-            out.push_str(&replace_shortcodes_in_table_row(line, store));
-        } else {
-            out.push_str(&replace_shortcodes(line, store));
-        }
-        out.push('\n');
+fn is_escaped_at(input: &str, pos: usize) -> bool {
+    let backslashes = input.as_bytes()[..pos]
+        .iter()
+        .rev()
+        .take_while(|&&b| b == b'\\')
+        .count();
+    backslashes % 2 == 1
+}
+
+fn is_adjacent_to_colon(input: &str, start: usize, end: usize) -> bool {
+    let bytes = input.as_bytes();
+    (start > 0 && bytes[start - 1] == b':') || bytes.get(end) == Some(&b':')
+}
+
+fn resolve_shortcode_for_transform(
+    shortcode: &str,
+    store: &IconStore,
+    strict: bool,
+) -> Result<Option<String>> {
+    if !store.has_alias(shortcode) && shortcode.bytes().all(|b| b.is_ascii_digit()) {
+        return Ok(None);
     }
 
-    out
-}
-
-fn looks_like_table_row(line: &str) -> bool {
-    line.trim_start().starts_with('|') && line.contains('|')
-}
-
-fn replace_shortcodes_in_table_row(line: &str, store: &IconStore) -> String {
-    line.split('|')
-        .map(|cell| replace_shortcodes_in_table_cell(cell, store))
-        .collect::<Vec<_>>()
-        .join("|")
-}
-
-fn replace_shortcodes_in_table_cell(cell: &str, store: &IconStore) -> String {
-    let trimmed = cell.trim();
-    if let Some(shortcode) = TABLE_SHORTCODE_ONLY_RE
-        .captures(trimmed)
-        .and_then(|caps| caps.get(1).map(|m| m.as_str()))
-    {
-        if let Some(svg) = store.render_shortcode(shortcode) {
-            return format!(
-                "<span style=\"display:inline-flex; width: 100%; justify-content: center;\">{svg}</span>"
-            );
+    if strict {
+        match store.render_shortcode_result(shortcode) {
+            Ok(Some(svg)) => Ok(Some(svg)),
+            Ok(None) => Err(anyhow!("unknown icon shortcode ':{shortcode}:'")),
+            Err(err) => Err(err.context(format!("failed to render ':{shortcode}:'"))),
         }
-    }
-
-    replace_shortcodes(cell, store)
-}
-
-fn replace_shortcodes(line: &str, store: &IconStore) -> String {
-    let mut result = String::new();
-    let mut rest = line;
-    let mut in_inline_code = false;
-
-    while let Some(pos) = rest.find('`') {
-        let (before, after) = rest.split_at(pos);
-        if !in_inline_code {
-            result.push_str(&replace_shortcodes_in_text(before, store));
-        } else {
-            result.push_str(before);
-        }
-        result.push('`');
-        in_inline_code = !in_inline_code;
-        rest = &after[1..];
-    }
-
-    if !in_inline_code {
-        result.push_str(&replace_shortcodes_in_text(rest, store));
     } else {
-        result.push_str(rest);
+        Ok(store.render_shortcode(shortcode))
     }
-
-    result
 }
 
-fn replace_shortcodes_in_text(text: &str, store: &IconStore) -> String {
-    SHORTCODE_RE
-        .replace_all(text, |caps: &regex::Captures| {
-            let shortcode = caps.get(1).unwrap().as_str();
-            store
-                .render_shortcode(shortcode)
-                .unwrap_or_else(|| caps.get(0).unwrap().as_str().to_string())
-        })
-        .into_owned()
+fn collect_inline_replacements(
+    input: &str,
+    range: Range<usize>,
+    store: &IconStore,
+    strict: bool,
+    replacements: &mut Vec<(Range<usize>, String)>,
+) -> Result<()> {
+    let slice = &input[range.start..range.end];
+    for caps in SHORTCODE_RE.captures_iter(slice) {
+        let full = caps.get(0).unwrap();
+        let abs_start = range.start + full.start();
+        let abs_end = range.start + full.end();
+        if is_escaped_at(input, abs_start) || is_adjacent_to_colon(input, abs_start, abs_end) {
+            continue;
+        }
+        let shortcode = caps.get(1).unwrap().as_str();
+        if let Some(svg) = resolve_shortcode_for_transform(shortcode, store, strict)? {
+            replacements.push((abs_start..abs_end, svg));
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+fn transform_markdown(input: &str, store: &IconStore) -> String {
+    transform_markdown_with_options(input, store, TransformOptions::default())
+        .expect("non-strict markdown transform should not fail")
+}
+
+fn transform_markdown_with_options(
+    input: &str,
+    store: &IconStore,
+    options: TransformOptions,
+) -> Result<String> {
+    let parser = MarkdownParser::new_ext(input, markdown_options()).into_offset_iter();
+    let mut replacements: Vec<(Range<usize>, String)> = Vec::new();
+
+    let mut skip_depth: usize = 0;
+    let mut in_table_cell = false;
+    let mut cell_event_count: usize = 0;
+    let mut cell_text_ranges: Vec<Range<usize>> = Vec::new();
+
+    for (event, range) in parser {
+        match event {
+            Event::Start(Tag::TableCell) => {
+                in_table_cell = true;
+                cell_event_count = 0;
+                cell_text_ranges.clear();
+            }
+            Event::End(TagEnd::TableCell) => {
+                if options.center_table_icons
+                    && cell_event_count == 1
+                    && cell_text_ranges.len() == 1
+                {
+                    let r = &cell_text_ranges[0];
+                    let slice = &input[r.start..r.end];
+                    let trimmed = slice.trim();
+                    let trim_offset = trimmed.as_ptr() as usize - slice.as_ptr() as usize;
+                    let abs_start = r.start + trim_offset;
+                    let abs_end = abs_start + trimmed.len();
+                    if !is_escaped_at(input, abs_start)
+                        && !is_adjacent_to_colon(input, abs_start, abs_end)
+                        && let Some(shortcode) = TABLE_SHORTCODE_ONLY_RE
+                            .captures(trimmed)
+                            .and_then(|caps| caps.get(1).map(|m| m.as_str()))
+                        && let Some(svg) =
+                            resolve_shortcode_for_transform(shortcode, store, options.strict)?
+                    {
+                        replacements.push((
+                            abs_start..abs_end,
+                            format!(
+                                "<span class=\"mdbook-icon-cell\" style=\"display:inline-flex; width: 100%; justify-content: center;\">{svg}</span>"
+                            ),
+                        ));
+                        in_table_cell = false;
+                        continue;
+                    }
+                }
+
+                for text_range in cell_text_ranges.drain(..) {
+                    collect_inline_replacements(
+                        input,
+                        text_range,
+                        store,
+                        options.strict,
+                        &mut replacements,
+                    )?;
+                }
+                in_table_cell = false;
+            }
+            Event::Start(ref tag) => {
+                if in_table_cell {
+                    cell_event_count += 1;
+                }
+                if should_skip_tag(tag) {
+                    skip_depth += 1;
+                }
+            }
+            Event::End(ref tag_end) => {
+                if in_table_cell {
+                    cell_event_count += 1;
+                }
+                if should_skip_tag_end(tag_end) {
+                    skip_depth = skip_depth.saturating_sub(1);
+                }
+            }
+            Event::Text(_) => {
+                if in_table_cell {
+                    cell_event_count += 1;
+                    if skip_depth == 0 {
+                        cell_text_ranges.push(range);
+                    }
+                } else if skip_depth == 0 {
+                    collect_inline_replacements(
+                        input,
+                        range,
+                        store,
+                        options.strict,
+                        &mut replacements,
+                    )?;
+                }
+            }
+            _ => {
+                if in_table_cell {
+                    cell_event_count += 1;
+                }
+            }
+        }
+    }
+
+    if replacements.is_empty() {
+        return Ok(input.to_string());
+    }
+
+    let mut out = String::with_capacity(input.len() + replacements.len() * 160);
+    let mut last_end = 0;
+    for (range, replacement) in replacements {
+        debug_assert!(range.start >= last_end);
+        out.push_str(&input[last_end..range.start]);
+        out.push_str(&replacement);
+        last_end = range.end;
+    }
+    out.push_str(&input[last_end..]);
+    Ok(out)
 }
 
 #[derive(Parser)]
@@ -219,8 +403,7 @@ fn main() -> Result<()> {
         }
         Some(Command::Update { version, check }) => {
             let target_version = match version {
-                Some(version) => version,
-                None if check => fetch_latest_iconify_version()?,
+                Some(version) => iconify::validate_version(&version)?.to_string(),
                 None => fetch_latest_iconify_version()?,
             };
 
@@ -249,12 +432,22 @@ fn main() -> Result<()> {
     }
 
     let stdin = io::stdin();
+    if stdin.is_terminal() {
+        let mut cmd = Cli::command();
+        cmd.print_help()?;
+        eprintln!(
+            "\nNote: `mdbook-icons` runs as an mdBook preprocessor (reading JSON from stdin).\n\
+             Add `[preprocessor.icons]` to your `book.toml` and run `mdbook build`."
+        );
+        return Ok(());
+    }
+
     let mut input: Value =
         serde_json::from_reader(stdin).context("failed to parse mdbook preprocessing input")?;
 
     let context = input
         .as_array()
-        .and_then(|items| items.get(0))
+        .and_then(|items| items.first())
         .cloned()
         .ok_or_else(|| anyhow!("mdBook input must be a tuple of (context, book)"))?;
 
@@ -263,9 +456,9 @@ fn main() -> Result<()> {
         .and_then(|items| items.get_mut(1))
         .ok_or_else(|| anyhow!("mdBook input must be a tuple of (context, book)"))?;
 
-    let aliases = load_aliases(&context);
-    let store = IconStore::with_aliases(aliases);
-    replace_in_book(book, &store).context("failed to process book contents")?;
+    let cfg = load_config(&context)?;
+    let store = IconStore::from_config(cfg.root.as_deref(), cfg.version.as_deref(), cfg.aliases)?;
+    replace_in_book(book, &store, cfg.options).context("failed to process book contents")?;
 
     serde_json::to_writer(io::stdout(), book).context("failed to write processed book")?;
     Ok(())
@@ -278,14 +471,15 @@ struct NpmLatestMeta {
 
 fn fetch_latest_iconify_version() -> Result<String> {
     let url = "https://registry.npmjs.org/@iconify/json/latest";
-    let mut response = ureq::get(url)
+    let mut response = iconify::http_agent()
+        .get(url)
         .call()
         .with_context(|| format!("downloading Iconify package metadata from {url}"))?;
     let meta: NpmLatestMeta = response
         .body_mut()
         .read_json()
         .context("parsing latest Iconify package metadata")?;
-    Ok(meta.version)
+    Ok(iconify::validate_version(&meta.version)?.to_string())
 }
 
 fn write_iconify_version_file(version: &str) -> Result<PathBuf> {
@@ -295,7 +489,7 @@ fn write_iconify_version_file(version: &str) -> Result<PathBuf> {
     Ok(path)
 }
 
-fn read_iconify_version_file(path: &PathBuf) -> Result<String> {
+fn read_iconify_version_file(path: &Path) -> Result<String> {
     let version =
         fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
     Ok(version.trim().to_string())
@@ -355,8 +549,175 @@ mod tests {
         let output = transform_markdown(input, &store);
 
         assert!(
-            output.contains("display:inline-flex; width: 100%; justify-content: center;"),
+            output.contains(
+                "class=\"mdbook-icon-cell\" style=\"display:inline-flex; width: 100%; justify-content: center;\""
+            ),
             "icon-only table cells should be centered"
         );
+    }
+
+    #[test]
+    fn handles_multi_backtick_code_spans_and_nested_fences() {
+        let store = IconStore::new();
+        let input = concat!(
+            "Double backticks: `` `:mdi-home:` and :mdi-home: ``\n\n",
+            "````md\n",
+            "```md\n",
+            ":mdi-home:\n",
+            "```\n",
+            ":mdi-home:\n",
+            "````\n",
+            "Outside: :mdi-home:\n",
+        );
+        let output = transform_markdown(input, &store);
+
+        assert!(
+            output.contains("`` `:mdi-home:` and :mdi-home: ``"),
+            "double-backtick inline code should not be modified"
+        );
+        assert!(
+            output.contains("````md\n```md\n:mdi-home:\n```\n:mdi-home:\n````"),
+            "4-backtick outer fence should not close on inner 3-backtick fence"
+        );
+        assert!(
+            output.contains("Outside: <svg"),
+            "shortcode after nested fence should still render"
+        );
+    }
+
+    #[test]
+    fn skips_urls_images_html_attributes_and_escaped_shortcodes() {
+        let store = IconStore::new();
+        let input = concat!(
+            "[Go :mdi-home:](https://example.com/:mdi-home:/page \":mdi-home:\")\n\n",
+            "![:mdi-home:](https://example.com/logo.png)\n\n",
+            "<span data-icon=\":mdi-home:\">Visible :mdi-home:</span>\n\n",
+            "<script>const icon = \":mdi-home:\";</script>\n\n",
+            "Escaped \\:mdi-home:\n",
+        );
+        let output = transform_markdown(input, &store);
+
+        assert!(
+            output.contains("](https://example.com/:mdi-home:/page \":mdi-home:\")"),
+            "link destination and title should be untouched"
+        );
+        assert!(
+            output.contains("[Go <svg"),
+            "visible link label shortcode should render"
+        );
+        assert!(
+            output.contains("![:mdi-home:](https://example.com/logo.png)"),
+            "image alt text should not receive raw svg"
+        );
+        assert!(
+            output.contains("<span data-icon=\":mdi-home:\">Visible <svg"),
+            "inline html attribute should be untouched while inner text renders"
+        );
+        assert!(
+            output.contains("<script>const icon = \":mdi-home:\";</script>"),
+            "script html blocks should be untouched"
+        );
+        assert!(
+            output.contains("Escaped \\:mdi-home:"),
+            "backslash-escaped shortcode should be untouched"
+        );
+    }
+
+    #[test]
+    fn handles_pipeless_tables_escaped_pipes_and_code_in_cells() {
+        let store = IconStore::new();
+        let input = concat!(
+            "Label | Icon | Code\n",
+            "--- | --- | ---\n",
+            "A \\| B | :twemoji-check-mark-button: | `:twemoji-check-mark-button:`\n",
+        );
+        let output = transform_markdown(input, &store);
+
+        assert!(
+            output.contains("A \\| B |"),
+            "escaped pipe in table cell should remain intact"
+        );
+        assert!(
+            output.contains("display:inline-flex; width: 100%; justify-content: center;"),
+            "icon-only cell in pipeless GFM table should be centered"
+        );
+        assert!(
+            output.contains("`:twemoji-check-mark-button:`"),
+            "inline code in table cell should not be replaced"
+        );
+    }
+
+    #[test]
+    fn loads_book_toml_preprocessor_options() {
+        let context = serde_json::json!({
+            "root": "/tmp/my-book",
+            "config": {
+                "preprocessor": {
+                    "icons": {
+                        "version": "2.2.556",
+                        "center-table-icons": false,
+                        "strict": true,
+                        "aliases": {
+                            "home": ":mdi-home:"
+                        }
+                    }
+                }
+            }
+        });
+
+        let cfg = load_config(&context).expect("valid config");
+        assert_eq!(cfg.root, Some(PathBuf::from("/tmp/my-book")));
+        assert_eq!(cfg.version.as_deref(), Some("2.2.556"));
+        assert!(!cfg.options.center_table_icons);
+        assert!(cfg.options.strict);
+        assert_eq!(
+            cfg.aliases.get("home").map(String::as_str),
+            Some("mdi-home")
+        );
+    }
+
+    #[test]
+    fn supports_disabling_table_icon_centering_and_strict_mode() {
+        let store = IconStore::new();
+        let table = "| Status |\n| --- |\n| :twemoji-check-mark-button: |\n";
+        let uncentered = transform_markdown_with_options(
+            table,
+            &store,
+            TransformOptions {
+                center_table_icons: false,
+                strict: false,
+            },
+        )
+        .expect("transform succeeds");
+        assert!(
+            uncentered.contains("<svg"),
+            "icon should still render when centering is disabled"
+        );
+        assert!(
+            !uncentered.contains("mdbook-icon-cell"),
+            "centering wrapper should be omitted when center-table-icons = false"
+        );
+
+        let strict_opts = TransformOptions {
+            center_table_icons: true,
+            strict: true,
+        };
+
+        let ok_prose =
+            "Valid :mdi-home:, Rust path std::io::Read, time 10:30:00, escaped \\:mdii-home:";
+        let rendered = transform_markdown_with_options(ok_prose, &store, strict_opts)
+            .expect("rust paths, timestamps, and escaped shortcodes should pass strict mode");
+        assert!(rendered.contains("std::io::Read"));
+        assert!(rendered.contains("10:30:00"));
+
+        let unknown_prefix_err =
+            transform_markdown_with_options("Typo :mdii-home:", &store, strict_opts)
+                .expect_err("unknown prefix should fail in strict mode");
+        assert!(unknown_prefix_err.to_string().contains(":mdii-home:"));
+
+        let missing_icon_err =
+            transform_markdown_with_options("Missing :mdi-nope:", &store, strict_opts)
+                .expect_err("missing icon in known collection should fail in strict mode");
+        assert!(missing_icon_err.to_string().contains(":mdi-nope:"));
     }
 }
