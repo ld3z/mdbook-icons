@@ -1,17 +1,9 @@
 core:changelogs:
-  - content: "---\npackages:\n  cargo:mdbook-icons:\n    type: patch\n---\n\n## Bump dependencies & cache collections\n"
-    filename: 2026-08-29-mterfw0z.md
-    v: 0.0.0
-  - content: "---\npackages:\n  cargo:mdbook-icons:\n    type: patch\n---\n\n## Bump iconify version\n"
-    filename: 2026-08-29-mterk1o8.md
-    v: 0.0.0
-  - content: "---\npackages:\n  cargo:mdbook-icons:\n    type: patch\n---\n\n## Bump cargo deps and tegami\n"
-    filename: 2026-09-24-mufwfucr.md
+  - content: "---\npackages:\n  cargo:mdbook-icons:\n    type: minor\n---\n\n## Various improvements & bug fixes\n"
+    filename: 2026-11-12-mwe382ia.md
     v: 0.0.0
 core:packages:
   - changelogIds:
-      - 2026-08-29-mterfw0z.md
-      - 2026-08-29-mterk1o8.md
-      - 2026-09-24-mufwfucr.md
+      - 2026-11-12-mwe382ia.md
     id: cargo:mdbook-icons
     updated: true
